@@ -1,0 +1,118 @@
+
+
+========================
+SERVICE
+=======================
+
+we scale our application and enable load-balancing ---- the service.
+
+In a distributed application, different pieces of the app are called “services”.
+
+
+Services are really just “containers in production.” 
+
+A service only runs one image, but it codifies the way that image runs—what ports it should use, 
+how many replicas of the container should run so the service has the capacity it needs, and so on.
+
+Scaling a service changes the number of container instances running that piece of software, 
+assigning more computing resources to the service in the process.
+
+-------
+docker-compose.yml == define, run, and scale services
+
+A docker-compose.yml file is a YAML file that defines how Docker containers should behave in production.
+
+version: "3"
+services:
+  web:
+    # replace username/repo:tag with your name and image details
+    image: username/repo:tag    ######  PULL IMAGE
+    deploy:
+      replicas: 5    ### Run 5 instances of the image as a service called web
+      resources:
+        limits:
+          cpus: "0.1"   #### Limit each service to use at most 10% of CPU  and 50 MB of RAM
+          memory: 50M
+      restart_policy:
+        condition: on-failure   ## immediate restart container if fails
+    ports:
+      - "4000:80"    ## MAP 4000  on host  to web's Port 80
+    networks:
+      - webnet     ##  Instruct Web's containers to share port 80 via load-balanced network called webnet.
+networks:
+  webnet:     ## define webnet  network with default settings( which is load balanced overlay network)
+  
+  
+  ----------------
+  
+  
+  Before we can use the docker stack deploy command we first run:
+
+docker swarm init
+
+Note: We get into the meaning of that command in part 4. 
+
+If you don’t run docker swarm init you get an error that “this node is not a swarm manager.”
+
+
+docker stack deploy -c docker-compose.yml getstartedlab ( your app name)
+
+
+docker service ls
+
+O/P:  ...  getstartedlab_web
+
+docker stack services getstartedlab
+
+
+--------
+A single container running in a service is called a task.
+Tasks are given unique IDs that numerically increment, up to the number of replicas you defined in docker-compose.yml. 
+List the tasks for your service:
+
+docker service ps getstartedlab_web
+
+Tasks also show up if you just list all the containers on your system, though that is not filtered by service:
+
+docker container ls -q
+
+
+You can run curl -4 http://localhost:4000 several times in a row, 
+or go to that URL in your browser and hit refresh a few times.   --- the container ID changes, demonstrating the load-balancing
+
+docker stack ps getstartedlab  ## view all tasks of a stack
+
+----------
+
+Scale the app  by changing the replicas
+
+docker stack deploy -c docker-compose.yml getstartedlab
+
+Docker performs an in-place update, no need to tear the stack down first or kill any containers.
+
+docker container ls -q 
+
+---to see the deployed instances reconfigured. 
+If you scaled up the replicas, more tasks, and hence, more containers, are started.
+
+------------
+
+Take the app down with docker stack rm:
+
+docker stack rm getstartedlab
+Take down the swarm.
+
+docker swarm leave --force
+
+------------
+
+========================
+SWARMS  ************
+=======================
+
+lets see how to  deploy this application onto a cluster, running it on multiple machines. 
+Multi-container, multi-machine apps are made possible by joining multiple machines into a “Dockerized” cluster called a swarm.
+
+
+  
+  
